@@ -1,9 +1,9 @@
 # JS-path-planning-algorithm
 # How to test
 1) install http-server node module globally.
-2) run the folowing command in terminal without quote in the project folder.
+2) run command "node dron-path.js" without quote in the project folder.
+3) run the folowing command in terminal without quote in the project folder.
     "http-server"
-3) run command "node dron-path.js" without quote.
 4) get to "localhost:8080/show.html" in chrome.
 
 # Input format
