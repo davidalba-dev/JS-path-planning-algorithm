@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+        <script scr="./show.js"></script>
+    </head>
+    <body>
+        <canvas id="vineyard" width="900" height="450" style="border:1px solid #d3d3d3;"></canvas>
+    </body>
+    <script>
+        $(document).ready(function(){
+            $.get('./out.txt', function(data) {
+                var height = 450;
+                var c = document.getElementById("vineyard");
+                var ctx = c.getContext("2d");
+                ctx.beginPath();
+
+                data = data.split('\n');
+
+                let n = parseInt(data[0], 10);
+                let beginPoint = data[1].split(' ');
+                for (let i = 0; i < n; i ++) {
+                    let ord = data[i + 1].split(' ');
+                    if (!i) {
+                        ctx.moveTo(ord[0], height - ord[1]);
+                    } else {
+                        ctx.lineTo(ord[0], height - ord[1]);
+                    }
+                }
+
+                ctx.lineTo(beginPoint[0], height - beginPoint[1]);
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                ctx.beginPath();
+
+                let m = parseInt(data[n + 1], 10);
+                for (let i = n + 2; i < data.length; i ++) {
+                    let ord = data[i].split(' ');
+                    if (!i) ctx.moveTo(ord[0], height - ord[1]);
+                    else ctx.lineTo(ord[0], height - ord[1]);
+                }
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = '#ff0000';
+                ctx.stroke();
+
+            }, 'text');
+        });
+    </script>
+</html>
