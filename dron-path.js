@@ -232,25 +232,27 @@ function getIntersectionSegments(poly, entryPoint, angle, interLineAge, directio
     path.push(entryPoint);
     let id;
 
-    if (entryPoint.distance(segments[0].A) + ep < entryPoint.distance(segments[0].B)) {
-        path.push(segments[0].A);
-        path.push(segments[0].B);
-        id = 1;
-    } else {
-        path.push(segments[0].B);
-        path.push(segments[0].A);
-        id = 0;
-    }
-
-    if (segments.length > 1) for (let i = 1; i < segments.length; i ++) {
-        if (id) {
-            path.push(segments[i].B);
-            path.push(segments[i].A);
+    if (segments.length) {
+        if (entryPoint.distance(segments[0].A) + ep < entryPoint.distance(segments[0].B)) {
+            path.push(segments[0].A);
+            path.push(segments[0].B);
+            id = 1;
         } else {
-            path.push(segments[i].A);
-            path.push(segments[i].B);
+            path.push(segments[0].B);
+            path.push(segments[0].A);
+            id = 0;
         }
-        id = 1 - id;
+    
+        if (segments.length > 1) for (let i = 1; i < segments.length; i ++) {
+            if (id) {
+                path.push(segments[i].B);
+                path.push(segments[i].A);
+            } else {
+                path.push(segments[i].A);
+                path.push(segments[i].B);
+            }
+            id = 1 - id;
+        }
     }
 
     /// output ///
