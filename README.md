@@ -9,9 +9,9 @@
 # Input format
 First line contains n, index, angle, interLineAge, direction
 
-n means the number of polygon nodes.
-index is the index of entry point in polygon nodes list - [1, n]
-interLineAge is the distance between parallel lines
-direction is 1 or -1, where 1 means go right otherwise, goes left.
+- n means the number of polygon nodes.
+- index is the index of entry point in polygon nodes list - [1, n]
+- interLineAge is the distance between parallel lines
+- direction is 1 or -1, where 1 means go right otherwise, goes left.
 
 Next n lines contain ordinates of polygon nodes on x-axis, y-axis in each line.
