@@ -6,7 +6,7 @@ const ws = fs.createWriteStream("out.txt");
 const entryPointTitleList = ['topLeft', 'topRight', 'bottomLeft', 'bottomRight'];
 const offsets = [1, 1, -1, -1];
 
-const LAT_LONG_MODE = false;
+const LAT_LONG_MODE = true;
 
 let segments = [];
 
@@ -54,7 +54,7 @@ function convertMeterToLatLong(distanceM){
     return (0.0001 / 1.11) * distanceM
 }
 
-const ep = LAT_LONG_MODE ? convertMeterToLatLong(1.0e-7) : 1.0e-7;
+const ep = LAT_LONG_MODE ? convertMeterToLatLong(1.0e-9) : 1.0e-9;
 
 function crossProduct(A, B) { return A.scala(B); }
 
@@ -196,18 +196,6 @@ function getIntersectionSegmentsInsideConvex(poly, centroid, angle, distanceBetw
             return A.y - B.y;
         });
 
-        let filteredIntersections = [];
-        for (let i = 0; i < intersections.length; i ++) {
-            if (i == 0) {
-                filteredIntersections.push(intersections[0]);
-            } else {
-                if (intersections[i].x - intersections[i - 1].x > ep || intersections[i].y - intersections[i - 1].y > ep) {
-                    filteredIntersections.push(intersections[i]);
-                }
-            }
-        }
-        intersections = filteredIntersections;
-
         for (let i = 0; i < intersections.length - 1; i ++) {
             let overlapping = false;
             /// check if each line is overlapping with polygon edges
@@ -233,12 +221,12 @@ function getIntersectionSegmentsInsideConvex(poly, centroid, angle, distanceBetw
             let middlePoint = intersections[i].plus(intersections[i + 1]).divide(2);
             let insideConvex = insideConvexPoly(poly, middlePoint);
             if (insideConvex) {
-                if (intersections[i].y < intersections[i + 1].y) {
+                if (intersections[i].y + ep < intersections[i + 1].y) {
                     segments.push(new segment(intersections[i], intersections[i + 1])); /// seg.A : lower y ordinate
-                } else if (intersections[i].y > intersections[i + 1].y) {
+                } else if (intersections[i].y > ep + intersections[i + 1].y) {
                     segments.push(new segment(intersections[i + 1], intersections[i])); /// seg.B : higher y ordinate
                 } else {
-                    if (intersections[i].x < interesctions[i + 1].x) {
+                    if (intersections[i].x + ep < intersections[i + 1].x) {
                         segments.push(new segment(intersections[i], intersections[i + 1])); /// seg.A : lower x ordinate
                     } else {
                         segments.push(new segment(intersections[i + 1], intersections[i])); /// seg.B : higher x ordinate
@@ -254,13 +242,24 @@ function getPath(poly, angle, distanceBetweenLines, entryPointTitle) {
 
     let centroid = getCentroidPolygon(poly);
 
-    let direction = -1; /// upper segments left side of transect 0
-    getIntersectionSegmentsInsideConvex(poly, centroid, angle, distanceBetweenLines, direction);
-    segments.reverse();
+    let direction;
+    if (angle > 180) {
+        angle -= 180;
+        direction = 1; /// upper segments right side of transect 0
+        getIntersectionSegmentsInsideConvex(poly, centroid, angle, distanceBetweenLines, direction);
+        segments.reverse();
 
-    direction = 1;
-    getIntersectionSegmentsInsideConvex(poly, centroid, angle, distanceBetweenLines, direction);
+        direction = -1; /// upper segments left side of transect 0
+        getIntersectionSegmentsInsideConvex(poly, centroid, angle, distanceBetweenLines, direction);
+    } else {
+        direction = -1; /// upper segments left side of transect 0
+        getIntersectionSegmentsInsideConvex(poly, centroid, angle, distanceBetweenLines, direction);
+        segments.reverse();
     
+        direction = 1;
+        getIntersectionSegmentsInsideConvex(poly, centroid, angle, distanceBetweenLines, direction);
+    }
+
     /// setting drone-path ///
     let n = segments.length;
     let entryID = entryPointTitleList.indexOf(entryPointTitle);
