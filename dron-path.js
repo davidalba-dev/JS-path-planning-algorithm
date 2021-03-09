@@ -6,7 +6,7 @@ const ws = fs.createWriteStream("out.txt");
 const entryPointTitleList = ['topLeft', 'topRight', 'bottomLeft', 'bottomRight'];
 const offsets = [1, 1, -1, -1];
 
-const LAT_LONG_MODE = true;
+const LAT_LONG_MODE = false;
 
 let segments = [];
 
@@ -251,6 +251,10 @@ function getPath(poly, angle, distanceBetweenLines, entryPointTitle) {
 
         direction = -1; /// upper segments left side of transect 0
         getIntersectionSegmentsInsideConvex(poly, centroid, angle, distanceBetweenLines, direction);
+
+        for (let i = 0; i < segments.length; i ++) {
+            segments[i] = new segment(segments[i].B, segments[i].A);            
+        }
     } else {
         direction = -1; /// upper segments left side of transect 0
         getIntersectionSegmentsInsideConvex(poly, centroid, angle, distanceBetweenLines, direction);
