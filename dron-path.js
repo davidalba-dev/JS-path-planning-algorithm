@@ -284,14 +284,19 @@ function getPath(poly, angle, distanceBetweenLines, entryPointTitle) {
         }
     }
 
-    /// output ///
+    /// For show on browser - need to be removed ///
     if (!LAT_LONG_MODE) {
         ws.write(poly.length + '\n');
         for (let i = 0; i < poly.length; i ++) {
             ws.write(poly[i].x + " " + poly[i].y + "\n");
         }
+    } else {
+        ws.write(poly.length + '\n');
+        for (let i = 0; i < poly.length; i ++) {
+            ws.write((poly[i].x * 100000 - 670500) + " " + (poly[i].y * 100000 - 4649700) + "\n");
+        }
     }
-    
+    /// End -- For show on browser - need to be removed ///
     return path;
 }
 
@@ -313,12 +318,17 @@ function main() {
             poly.push(new pnt(latLong[0], latLong[1]));
         }
 
+        /// Final Answer - path ///
         let path = getPath(poly, angle, LAT_LONG_MODE ? convertMeterToLatLong(distanceBetweenLines) : distanceBetweenLines, entryPointTitle);
     
-        /// output ///
+        /// For show on browser - Need to be removed ///
         if (LAT_LONG_MODE) {
+            let centroid = getCentroidPolygon(poly);
+            ws.write((centroid.x * 100000 - 670500) + " " + (centroid.y * 100000 - 4649700) + "\n");
+
+            ws.write(path.length + '\n');
             for (let i = 0; i < path.length; i ++) {
-                ws.write(path[i].x + " " + path[i].y + "\n");
+                ws.write((path[i].x * 100000 - 670500) + " " + (path[i].y * 100000 - 4649700) + "\n");
             }
         } else {
             let centroid = getCentroidPolygon(poly);
@@ -329,7 +339,7 @@ function main() {
                 ws.write(path[i].x + " " + path[i].y + "\n");
             }
         }
-        
+        /// End -- For show on browser - Need to be removed ///
         ws.end();
     });
 }
