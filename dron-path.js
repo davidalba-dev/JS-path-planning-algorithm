@@ -244,7 +244,6 @@ function getIntersectionSegmentsInsideConvex(poly, centroid, angle, interLineAge
 function getPath(poly, angle, interLineAge, entryPointTitle) {
     poly = getConvexHull(poly); /// anti-clock wised convex-hull polygon
 
-    console.log('returned', poly);
     let centroid = getCentroidPolygon(poly);
 
     let direction = -1; /// upper segments left side of transect 0
