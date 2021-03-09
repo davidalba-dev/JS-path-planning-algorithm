@@ -2,10 +2,11 @@
 
 const fs = require('fs');
 const ws = fs.createWriteStream("out.txt");
-const ep = 1.0e-7;
 
 const entryPointTitleList = ['topLeft', 'topRight', 'bottomLeft', 'bottomRight'];
 const offsets = [1, 1, -1, -1];
+
+const LAT_LONG_MODE = false;
 
 let segments = [];
 
@@ -48,6 +49,12 @@ pnt.prototype.scala = function(A) {
 pnt.prototype.vector = function(A) {
     return this.x * A.x + this.y * A.y;
 };
+
+function convertMeterToLatLong(distanceM){
+    return (0.0001 / 1.11) * distanceM
+}
+
+const ep = LAT_LONG_MODE ? convertMeterToLatLong(1.0e-7) : 1.0e-7;
 
 function crossProduct(A, B) { return A.scala(B); }
 
@@ -139,11 +146,12 @@ function getCentroidPolygon(poly) {
     return new pnt(minX, minY).plus(new pnt(maxX, maxY)).divide(2);
 }
 
-function getIntersectionSegmentsInsideConvex(poly, centroid, angle, interLineAge, direction) {
+function getIntersectionSegmentsInsideConvex(poly, centroid, angle, distanceBetweenLines, direction) {
     let rad = angle * Math.PI / 180;
     let dx, dy;
-    dx = 1.0 * Math.cos(rad);
-    dy = Math.sin(rad);
+    let delta = LAT_LONG_MODE ? convertMeterToLatLong(1.0) : 1.0;
+    dx = delta * Math.cos(rad);
+    dy = delta * Math.sin(rad);
 
     let n = poly.length;
 
@@ -152,18 +160,18 @@ function getIntersectionSegmentsInsideConvex(poly, centroid, angle, interLineAge
 
         if (direction == 1) { /// right direction
             if (Math.sin(rad) < ep) {
-                A = centroid.plus(new pnt(0.0, -interLineAge).multi(parseFloat(step)));
+                A = centroid.plus(new pnt(0.0, -distanceBetweenLines).multi(parseFloat(step)));
                 B = A.plus(new pnt(dx, dy));
             } else {
-                A = centroid.plus(new pnt(interLineAge / Math.sin(rad), 0.0).multi(parseFloat(step)));
+                A = centroid.plus(new pnt(distanceBetweenLines / Math.sin(rad), 0.0).multi(parseFloat(step)));
                 B = A.plus(new pnt(dx, dy));
             }
         } else if (direction == -1) { /// left direction
             if (Math.sin(rad) < ep) {
-                A = centroid.minus(new pnt(0.0, -interLineAge).multi(parseFloat(step)));
+                A = centroid.minus(new pnt(0.0, -distanceBetweenLines).multi(parseFloat(step)));
                 B = A.plus(new pnt(dx, dy));
             } else {
-                A = centroid.minus(new pnt(interLineAge / Math.sin(rad), 0.0).multi(parseFloat(step)));
+                A = centroid.minus(new pnt(distanceBetweenLines / Math.sin(rad), 0.0).multi(parseFloat(step)));
                 B = A.plus(new pnt(dx, dy));
             }
         }
@@ -241,17 +249,17 @@ function getIntersectionSegmentsInsideConvex(poly, centroid, angle, interLineAge
     }
 }
 
-function getPath(poly, angle, interLineAge, entryPointTitle) {
+function getPath(poly, angle, distanceBetweenLines, entryPointTitle) {
     poly = getConvexHull(poly); /// anti-clock wised convex-hull polygon
 
     let centroid = getCentroidPolygon(poly);
 
     let direction = -1; /// upper segments left side of transect 0
-    getIntersectionSegmentsInsideConvex(poly, centroid, angle, interLineAge, direction);
+    getIntersectionSegmentsInsideConvex(poly, centroid, angle, distanceBetweenLines, direction);
     segments.reverse();
 
     direction = 1;
-    getIntersectionSegmentsInsideConvex(poly, centroid, angle, interLineAge, direction);
+    getIntersectionSegmentsInsideConvex(poly, centroid, angle, distanceBetweenLines, direction);
     
     /// setting drone-path ///
     let n = segments.length;
@@ -277,11 +285,13 @@ function getPath(poly, angle, interLineAge, entryPointTitle) {
     }
 
     /// output ///
-    ws.write(poly.length + '\n');
-    for (let i = 0; i < poly.length; i ++) {
-        ws.write(poly[i].x + " " + poly[i].y + "\n");
+    if (!LAT_LONG_MODE) {
+        ws.write(poly.length + '\n');
+        for (let i = 0; i < poly.length; i ++) {
+            ws.write(poly[i].x + " " + poly[i].y + "\n");
+        }
     }
-
+    
     return path;
 }
 
@@ -293,37 +303,33 @@ function main() {
         let spec = data[0].split(' ');
         const n = parseInt(spec[0], 10);
         const angle = parseFloat(spec[1]);
-        const interLineAge = parseFloat(spec[2]);
+        const distanceBetweenLines = parseFloat(spec[2]);
         const entryPointTitle = spec[3];
 
         let poly = [];
-        let earthRadius = 6367000; // Radius in m
 
         for (let i = 1; i <= n; i ++) {
             const latLong = data[i].split(' ').map(temp => parseFloat(temp));
-            // Convert from Degrees to Radians
-            // let latRad = latLong[0] * (Math.PI)/180;
-            // let lonRad = latLong[1] * (Math.PI)/180;
-            
-            // let posX = earthRadius * Math.cos(latRad) * Math.cos(lonRad);
-            // let posY = earthRadius * Math.cos(latRad) * Math.sin(lonRad);
-
-            // poly.push(new pnt(posX, posY));
             poly.push(new pnt(latLong[0], latLong[1]));
         }
 
-        let path = getPath(poly, angle, interLineAge, entryPointTitle);
-
+        let path = getPath(poly, angle, LAT_LONG_MODE ? convertMeterToLatLong(distanceBetweenLines) : distanceBetweenLines, entryPointTitle);
     
         /// output ///
-        
-        let centroid = getCentroidPolygon(poly);
-        ws.write(centroid.x + " " + centroid.y + "\n");
+        if (LAT_LONG_MODE) {
+            for (let i = 0; i < path.length; i ++) {
+                ws.write(path[i].x + " " + path[i].y + "\n");
+            }
+        } else {
+            let centroid = getCentroidPolygon(poly);
+            ws.write(centroid.x + " " + centroid.y + "\n");
 
-        ws.write(path.length + '\n');
-        for (let i = 0; i < path.length; i ++) {
-            ws.write(path[i].x + " " + path[i].y + "\n");
+            ws.write(path.length + '\n');
+            for (let i = 0; i < path.length; i ++) {
+                ws.write(path[i].x + " " + path[i].y + "\n");
+            }
         }
+        
         ws.end();
     });
 }
