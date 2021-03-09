@@ -6,7 +6,7 @@ const ws = fs.createWriteStream("out.txt");
 const entryPointTitleList = ['topLeft', 'topRight', 'bottomLeft', 'bottomRight'];
 const offsets = [1, 1, -1, -1];
 
-const LAT_LONG_MODE = false;
+const LAT_LONG_MODE = true;
 
 let segments = [];
 
