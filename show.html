@@ -33,15 +33,41 @@
                 ctx.stroke();
 
                 ctx.beginPath();
+                let centroid = data[n + 1].split(' ');
+                var x = centroid[0]; // x coordinate
+                var y = height - centroid[1]; // y coordinate
+                var radius = 5; // Arc radius
+                var startAngle = 0; // Starting point on circle
+                var endAngle = 2 * Math.PI; // End point on circle
+                var anticlockwise = false; // clockwise or anticlockwise
 
-                let m = parseInt(data[n + 1], 10);
-                for (let i = n + 2; i < data.length; i ++) {
+                ctx.arc(x, y, radius, startAngle, endAngle, anticlockwise);
+                ctx.fillStyle = 'green';
+                ctx.fill();
+
+                ctx.beginPath();
+                let entryPoint = data[n + 3].split(' ');
+                var x = entryPoint[0]; // x coordinate
+                var y = height - entryPoint[1]; // y coordinate
+                var radius = 5; // Arc radius
+                var startAngle = 0; // Starting point on circle
+                var endAngle = 2 * Math.PI; // End point on circle
+                var anticlockwise = false; // clockwise or anticlockwise
+
+                ctx.arc(x, y, radius, startAngle, endAngle, anticlockwise);
+                ctx.fillStyle = 'red';
+                ctx.fill();
+
+                ctx.beginPath();
+
+                let m = parseInt(data[n + 2], 10);
+                for (let i = n + 3; i < data.length; i ++) {
                     let ord = data[i].split(' ');
                     if (!i) ctx.moveTo(ord[0], height - ord[1]);
                     else ctx.lineTo(ord[0], height - ord[1]);
                 }
                 ctx.lineWidth = 2;
-                ctx.strokeStyle = '#ff0000';
+                ctx.strokeStyle = 'red';
                 ctx.stroke();
 
             }, 'text');
