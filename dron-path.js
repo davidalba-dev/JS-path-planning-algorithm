@@ -3,7 +3,7 @@
 const fs = require('fs');
 const ws = fs.createWriteStream("out.txt");
 
-const entryPointTitleList = ['topLeft', 'topRight', 'bottomLeft', 'bottomRight'];
+const entryPointTitleList = ["topLeft", "topRight", "bottomLeft", "bottomRight"];
 const offsets = [1, 1, -1, -1];
 
 const LAT_LONG_MODE = true;
@@ -56,47 +56,6 @@ function convertMeterToLatLong(distanceM){
 
 const ep = LAT_LONG_MODE ? convertMeterToLatLong(1.0e-9) : 1.0e-9;
 
-function crossProduct(A, B) { return A.scala(B); }
-
-/// Get Convex Hull -- Graham's Algorithm ///
-function getConvexHull(poly) {
-    poly.sort(function(A, B) {
-        if (A.x != B.x) return A.x - B.x;
-        return A.y - B.y;
-    });
-
-    /// erase same points and make polygon list unique ///
-    let filteredPoly = [];
-    for (let i = 0; i < poly.length; i ++) {
-        if (i == 0) {
-            filteredPoly.push(poly[0]);
-        } else {
-            if (poly[i].x - poly[i - 1].x > ep || poly[i].y - poly[i - 1].y > ep) {
-                filteredPoly.push(poly[i]);
-            }
-        }
-    }
-
-    poly = filteredPoly;
-    let n = poly.length;
-    let m = 0;
-    let ch = [];
-
-    for (let i = 0; i < n; i ++) {
-        while (m > 1 && crossProduct(ch[m - 1].minus(ch[m - 2]), poly[i].minus(ch[m - 2])) <= 0.0) m --;
-        ch[m ++] = poly[i];
-    }
-
-    let k = m;
-    for (let i = n - 2; i >= 0; i --) {
-        while (m > k && crossProduct( ch[m - 1].minus(ch[m - 2]), poly[i].minus(ch[m - 2]) ) <= 0.0) m --;
-        ch[m ++] = poly[i];
-    }
-    if (n > 1) m --;
-    ch.length = m;
-    return ch;
-}
-
 function inside(A, B, C) { /// if pnt A is on the segment between pnt B and pnt C, return 1
     let a = A.minus(B).vector(C.minus(B));
     let b = C.minus(B).vector(C.minus(B));
@@ -118,20 +77,6 @@ function intersect(A, B, C, D) {
     }
     let x = A.minus(D).scala(C.minus(D)) / den; /// (a - d ^ c - d) / den
     return A.multi(1 - x).plus(B.multi(x)); /// a * (1 - x) + b * x   The two lines are intersect...
-}
-
-function insideConvexPoly(poly, q) {
-    let cnt = 0;
-    let n = poly.length;
-    for (let i = 0; i < n; i ++) {
-        let j = (i + 1) % n;
-        if (inside(q, poly[i], poly[j])) return 2;
-        if (poly[i].minus(q).scala(poly[j].minus(q)) > ep) {
-            cnt ++;
-        }
-    }
-    if (cnt == n || !cnt) return 1;
-    return 0;
 }
 
 function getCentroidPolygon(poly) {
@@ -188,16 +133,15 @@ function getIntersectionSegmentsInsideConvex(poly, centroid, angle, distanceBetw
         }
         
         if (intersections.length == 0) break;
-
         if (intersections.length == 1) continue;
 
         intersections.sort(function(A, B) {
-            if (A.x != B.x) return A.x - B.x;
-            return A.y - B.y;
+            if (Math.abs(A.x - B.x) < ep) return A.x + ep - B.x;
+            return A.y + ep - B.y;
         });
 
+        let overlapping = false;
         for (let i = 0; i < intersections.length - 1; i ++) {
-            let overlapping = false;
             /// check if each line is overlapping with polygon edges
             for (let j = 0; j < n; j ++) {
                 let k = (j + 1) % n;
@@ -214,32 +158,26 @@ function getIntersectionSegmentsInsideConvex(poly, centroid, angle, distanceBetw
                     }
                 }
             }
+        }
 
-            if (overlapping == true) continue;
+        if (intersections.length == 2 && overlapping == true) continue;
 
-            /// choose segments inside polygon ---- for double-check ///
-            let middlePoint = intersections[i].plus(intersections[i + 1]).divide(2);
-            let insideConvex = insideConvexPoly(poly, middlePoint);
-            if (insideConvex) {
-                if (intersections[i].y + ep < intersections[i + 1].y) {
-                    segments.push(new segment(intersections[i], intersections[i + 1])); /// seg.A : lower y ordinate
-                } else if (intersections[i].y > ep + intersections[i + 1].y) {
-                    segments.push(new segment(intersections[i + 1], intersections[i])); /// seg.B : higher y ordinate
-                } else {
-                    if (intersections[i].x + ep < intersections[i + 1].x) {
-                        segments.push(new segment(intersections[i], intersections[i + 1])); /// seg.A : lower x ordinate
-                    } else {
-                        segments.push(new segment(intersections[i + 1], intersections[i])); /// seg.B : higher x ordinate
-                    }
-                }
+        let m = intersections.length;
+        if (intersections[0].y + ep < intersections[m - 1].y) {
+            segments.push(new segment(intersections[0], intersections[m - 1])); /// seg.A : lower y ordinate
+        } else if (intersections[0].y > ep + intersections[m - 1].y) {
+            segments.push(new segment(intersections[m - 1], intersections[0])); /// seg.B : higher y ordinate
+        } else {
+            if (intersections[0].x + ep < intersections[m - 1].x) {
+                segments.push(new segment(intersections[0], intersections[m - 1])); /// seg.A : lower x ordinate
+            } else {
+                segments.push(new segment(intersections[m - 1], intersections[0])); /// seg.B : higher x ordinate
             }
         }
     }
 }
 
 function getPath(poly, angle, distanceBetweenLines, entryPointTitle) {
-    poly = getConvexHull(poly); /// anti-clock wised convex-hull polygon
-
     let centroid = getCentroidPolygon(poly);
 
     let direction;
@@ -253,7 +191,7 @@ function getPath(poly, angle, distanceBetweenLines, entryPointTitle) {
         getIntersectionSegmentsInsideConvex(poly, centroid, angle, distanceBetweenLines, direction);
 
         for (let i = 0; i < segments.length; i ++) {
-            segments[i] = new segment(segments[i].B, segments[i].A);            
+            segments[i] = new segment(segments[i].B, segments[i].A);
         }
     } else {
         direction = -1; /// upper segments left side of transect 0
@@ -266,7 +204,7 @@ function getPath(poly, angle, distanceBetweenLines, entryPointTitle) {
 
     /// setting drone-path ///
     let n = segments.length;
-    let entryID = entryPointTitleList.indexOf(entryPointTitle);
+    let entryID = entryPointTitleList.findIndex(title => title == entryPointTitle) 
     let startID = entryID > 1 ? n - 1 : 0;
 
     let path = [];
@@ -296,7 +234,7 @@ function getPath(poly, angle, distanceBetweenLines, entryPointTitle) {
     } else {
         ws.write(poly.length + '\n');
         for (let i = 0; i < poly.length; i ++) {
-            ws.write((poly[i].x * 100000 - 670500) + " " + (poly[i].y * 100000 - 4649700) + "\n");
+            ws.write((poly[i].x * 100000 - 671500) + " " + (poly[i].y * 100000 - 4649000) + "\n");
         }
     }
     /// End -- For show on browser - need to be removed ///
@@ -312,7 +250,7 @@ function main() {
         const n = parseInt(spec[0], 10);
         const angle = parseFloat(spec[1]);
         const distanceBetweenLines = parseFloat(spec[2]);
-        const entryPointTitle = spec[3];
+        const entryPointTitle = spec[3].split('\r')[0];
 
         let poly = [];
 
@@ -327,11 +265,11 @@ function main() {
         /// For show on browser - Need to be removed ///
         if (LAT_LONG_MODE) {
             let centroid = getCentroidPolygon(poly);
-            ws.write((centroid.x * 100000 - 670500) + " " + (centroid.y * 100000 - 4649700) + "\n");
+            ws.write((centroid.x * 100000 - 671500) + " " + (centroid.y * 100000 - 4649000) + "\n");
 
             ws.write(path.length + '\n');
             for (let i = 0; i < path.length; i ++) {
-                ws.write((path[i].x * 100000 - 670500) + " " + (path[i].y * 100000 - 4649700) + "\n");
+                ws.write((path[i].x * 100000 - 671500) + " " + (path[i].y * 100000 - 4649000) + "\n");
             }
         } else {
             let centroid = getCentroidPolygon(poly);
